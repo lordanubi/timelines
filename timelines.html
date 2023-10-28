@@ -1,0 +1,305 @@
+<html lang="en"><head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <title>Futuri Expense Tracker</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="googlebot" content="noindex, nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+  <style type="text/css">
+          
+body {
+  background-color: rgb(244, 244, 244);
+  padding: 0px;
+  text-align: center;
+  margin: 0 0  20px 0;
+  font-size: clamp(90%, 4vw, 110%);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI',  'Oxygen',
+  'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+  sans-serif;
+  }
+img {
+    width: auto;
+    height: 50px;
+    object-fit: cover;
+    cursor: pointer;
+}
+.expense-tracker {flex-wrap: wrap;display: flex;text-align: left;justify-content: center; margin-bottom: 20px;}
+
+.toolbar {display: flex;justify-content: space-between;align-items: center;margin-bottom: 10px;}
+
+.group {/* border: 1px solid rgba(0, 123, 255, 0.29); */min-width: 200px;padding: 15px;background-color: rgb(247, 247, 247);box-shadow: inset rgb(255 0 55 / 26%) 0px 0px 10px;flex-grow: 1;/* border-left: 0; *//* border-bottom: 0; *//* border-right: 0; *//* border: 0; *//* border-radius: 15px; */}
+
+.title {font-weight: bold;font-size: 105%; display: flex;
+    width: 100%;}
+
+.elements { margin-left: 5px; }
+
+.element { display: flex; justify-content: space-between; margin-top: 5px; }
+
+input[type="number"], input[type="text"] { display: none; padding: 5px; border: 1px solid rgb(204, 204, 204); border-radius: 5px; }
+
+button {display: none; background-color: rgb(0, 123, 255); color: white; border: none; border-radius: 5px; padding: 5px 10px; cursor: pointer; }
+
+button:hover { background-color: rgb(0, 86, 179); }
+
+#save-button { background-color: green; }
+
+#save-button:hover { background-color: rgb(0, 79, 0); }
+
+input[type="text"] { width: 70%; }
+
+input[type="number"] { width: 30%; }
+
+.title {color: #1c1a1a;}
+.group.positive {
+    box-shadow: inset rgb(23 162 0 / 42%) 0px 0px 10px;
+}
+.total, .currency { color: rgb(0, 123, 255); }
+.total {
+  margin-left: auto;
+}
+
+.elements, .name { text-transform: capitalize; }
+.element-container .currency {
+  margin-left: auto;
+}
+.element {display: flex;gap: 10px;align-items: center;opacity: 0.66;}
+
+.delete-element, .delete-group { cursor: pointer; padding: 4px 8px;border-radius: 50%; opacity: 0.3; display: none; }
+
+.elements { display: flex; flex-direction: column; gap: 5px; }
+
+.elements .element-container {display: flex;gap: 10px;align-items: center;padding: 5px;padding-top: 7px;border-top: 1px solid #0000001f;color: #121212;}
+
+.positive .total, .positive .currency {
+    color: green;
+}
+.negative .total, .negative .currency, .currency.negative {
+    color: #cf0000;
+}
+.currency.positive {
+    color: green;
+}
+.positive.currency::before, .positive .total::before {
+ content: "+";
+}
+.negative.currency::before, .negative .total::before {
+ content: "";
+}
+.toolbar:hover .delete-group {
+    display: block;
+}
+
+.element-container:hover .delete-element {
+    display: block;
+}
+.overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7); /* Adjust the opacity as needed */
+    z-index: 98; /* Just below the image */
+}
+img.active {
+    width: 100vw;
+    height: 100vh;
+    object-fit: contain;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 99;
+}
+/* Prevent scrolling when an image is zoomed */
+body.no-scroll {
+    overflow: hidden;
+}
+  </style>
+</head>
+<body contenteditable="true" class="">
+
+
+    <div class="overlay" id="overlay" style="display: none;"></div>
+    <div class="expense-tracker">
+    
+   </div>
+            <button id="add-group" style="display: inline;">+ Add Group</button>
+<button style="display: inline;" id="save-button">Save</button>
+
+
+
+
+    <script type="text/javascript">//<![CDATA[
+
+
+const expenseTracker = document.querySelector('.expense-tracker');
+let groupCount = 0;
+
+function addGroup() {
+    groupCount++;
+    const group = document.createElement('div');
+    group.classList.add('group');
+    group.innerHTML = `
+        <div class="toolbar"><div class="title"><span contentEditable="true" class="name">Group ${groupCount} </span> <span class="total"> 0.00</span><span class="currency">eur</span> </div>
+        <div class="delete-group">x</div></div>
+        
+        <div class="elements"></div>
+    `;
+    expenseTracker.appendChild(group);
+    addElement(group);
+    
+    // Add an event listener to the delete button
+    const deleteButton = group.querySelector('.delete-group');
+    deleteButton.addEventListener('click', () => {
+        const confirmDelete = confirm('Are you sure you want to delete this group?');
+        if (confirmDelete) {
+            const groupTotal = parseFloat(group.querySelector('.total').innerText);
+            const groups = expenseTracker.querySelectorAll('.group');
+            const grandTotal = Array.from(groups).reduce((acc, g) => {
+                return acc + parseFloat(g.querySelector('.total').innerText);
+            }, 0);
+            const total = document.querySelector('.grand-total');
+            total.innerText = grandTotal.toFixed(2) + "eur";
+            expenseTracker.removeChild(group);
+        }
+    });
+}
+function addElement(group) {
+    const elements = group.querySelector('.elements');
+    const total = group.querySelector('.total');
+    const toolbar = group.querySelector('.toolbar')
+    const element = document.createElement('div');
+    element.classList.add('element');
+    element.innerHTML = `
+        <input type="text" placeholder="Name" style="display: block">
+        <input type="number" placeholder="Amount" style="display: block">
+        <button style="display: block">Add</button>
+    `;
+    group.appendChild(element);
+
+    const nameInput = element.querySelector('input[type="text"]');
+    const amountInput = element.querySelector('input[type="number"]');
+    const addButton = element.querySelector('button');
+
+    addButton.addEventListener('click', () => {
+        const amount = parseFloat(amountInput.value) || 0;
+        const name = nameInput.value;
+        if (name) {
+            total.innerText = (parseFloat(total.innerText) + amount).toFixed(2);
+            const elementDisplay = document.createElement('div');
+            elementDisplay.className = 'element-container';
+            elementDisplay.innerHTML = `${name} <span class="currency ${amount >= 0 ? 'positive' : 'negative'}">${amount.toFixed(2)}eur</span> <button class="delete-element">x</button>`;
+            elements.insertAdjacentElement( "beforeend", elementDisplay);
+            
+            amountInput.value = '';
+            nameInput.value = '';
+            // Update the total amount class based on the new total
+            group.className = `group ${parseFloat(total.innerText) >= 0 ? 'positive' : 'negative'}`;
+
+        }
+    });
+}
+
+expenseTracker.addEventListener('click', (event) => {
+    const target = event.target;
+
+    if (target.classList.contains('delete-element')) {
+        // Delete element
+        const elementDisplay = target.parentElement;
+        const group = elementDisplay.closest('.group');
+        const total = group.querySelector('.total');
+        const amount = parseFloat(elementDisplay.querySelector('.currency').innerText);
+        total.innerText = (parseFloat(total.innerText) - amount).toFixed(2);
+        elementDisplay.remove();
+    }
+
+    if (target.classList.contains('delete-group')) {
+        // Delete group
+        const confirmDelete = confirm('Are you sure you want to delete this group?');
+        if (confirmDelete) {
+            const group = target.closest('.group');
+            group.remove(); // Remove the group
+
+            // Check if there are more groups
+            const groups = expenseTracker.querySelectorAll('.group');
+            if (groups.length > 0) {
+                const grandTotal = Array.from(groups).reduce((acc, g) => {
+                    return acc + parseFloat(g.querySelector('.total').innerText);
+                }, 0);
+                const total = document.querySelector('.grand-total');
+                total.innerText = grandTotal.toFixed(2) + "eur";
+            } else {
+                // If there are no groups left, reset the grand total
+                const total = document.querySelector('.grand-total');
+                total.innerText = "0.00eur";
+            }
+        }
+    }
+});
+
+
+const saveButton = document.getElementById("save-button");
+saveButton.addEventListener("click", saveAsHTML);
+
+function saveAsHTML() {
+    const htmlContent = document.documentElement.outerHTML;
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "expense_tracker.html";
+    a.click();
+}
+
+document.getElementById('add-group').addEventListener('click', addGroup);
+// Function to add event listeners to the "add" buttons
+function addAddButtonListeners() {
+    const addButtons = document.querySelectorAll('.element button');
+    addButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const amount = parseFloat(button.previousElementSibling.value) || 0;
+            const name = button.previousElementSibling.previousElementSibling.value;
+            if (name) {
+                const total = button.closest('.group').querySelector('.total');
+                total.innerText = (parseFloat(total.innerText) + amount).toFixed(2);
+                const elementDisplay = document.createElement('div');
+                elementDisplay.className = 'element-container';
+                elementDisplay.innerHTML = `${name} <span class="currency">${amount.toFixed(2)}eur</span> <button class="delete-element">x</button>`;
+                button.parentElement.parentElement.querySelector(".elements").insertAdjacentElement("beforeend", elementDisplay);
+                button.previousElementSibling.value = '';
+                button.previousElementSibling.previousElementSibling.value = '';
+            }
+        });
+    });
+}
+
+// Function to reattach event listeners when the page is loaded
+function reattachEventListeners() {
+    addAddButtonListeners();
+}
+
+
+document.addEventListener("DOMContentLoaded", function () {
+            reattachEventListeners();
+            // Add a click event listener to all elements with the "click-to-zoom" class
+const zoomableImages = document.querySelectorAll("img");
+const overlay = document.getElementById('overlay');
+
+zoomableImages.forEach(image => {
+    image.addEventListener('click', () => {
+        // Toggle the "active" class to apply or remove the styles
+        image.classList.toggle('active');
+        overlay.style.display = (overlay.style.display === 'block') ? 'none' : 'block';
+
+        // Toggle the "no-scroll" class to prevent or allow scrolling
+        document.body.classList.toggle('no-scroll');
+    });
+});
+        });
+
+  //]]></script>
+</body></html>
